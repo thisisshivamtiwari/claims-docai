@@ -1,2 +1,1 @@
-def hello() -> str:
-    return "Hello from claims-docai!"
+"""Insurance claim receipts to structured data, with field confidence and a human-review queue."""

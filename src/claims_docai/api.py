@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .data import HEADER_FIELDS, ROOT
 from .evaluate import PIPELINE_ARMS, RESULTS, printed_amounts, route
+from .normalize import amount
 
 Extractor = Callable[[bytes], tuple[dict[str, dict], list]]  # image -> (arm -> fields, OCR tokens)
 
@@ -81,7 +82,7 @@ def create_app(extractor: Extractor | None = None, settings: dict | None = None,
                 continue
             img = base64.b64encode(c["image"]).decode()
             inputs = "".join(
-                f'<label>{f} <input name="{f}" value="{c["fields"][f]["value"] or ""}"> '
+                f'<label>{f} <input name="{f}" value="{html.escape(str(c["fields"][f]["value"] or ""))}"> '
                 f"<small>confidence {c['fields'][f]['confidence']:.2f}</small></label><br>"
                 for f in todo
             )
@@ -105,7 +106,7 @@ def create_app(extractor: Extractor | None = None, settings: dict | None = None,
         c = claims[cid]
         for f in HEADER_FIELDS:
             if c["fields"][f].get("needs_review"):
-                c["fields"][f].update(value=html.escape(given[f] or "") or None, needs_review=False, reviewed=True)
+                c["fields"][f].update(value=amount(given[f]), needs_review=False, reviewed=True)
         log.parent.mkdir(parents=True, exist_ok=True)
         with log.open("a") as fh:
             fh.write(json.dumps({"id": cid, "fields": c["fields"]}) + "\n")

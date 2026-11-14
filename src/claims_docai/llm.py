@@ -19,6 +19,9 @@ from .data import ROOT
 CASSETTES = ROOT / "cassettes"
 TEXT_MODEL = "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
 VISION_MODEL = "mlx-community/Qwen2.5-VL-3B-Instruct-4bit"
+# Long-side sizes tried in order. Full-size CORD pages (up to 2304x4096) make the 4-bit model emit only "!!!!", and
+# some pages do it at one size and not another, so a degenerate answer is retried smaller.
+SIDES = (1024, 896, 768, 640)
 
 INSTRUCTIONS = """Extract these fields from the receipt for an insurance claim.
 Return only JSON: {"total": "...", "subtotal": "...", "tax": "...", "items": [{"name": "...", "price": "..."}]}
@@ -48,6 +51,11 @@ def parse(raw: str) -> dict:
         if isinstance(it, dict) and (it.get("name") or it.get("price")):
             out["items"].append({"name": it.get("name"), "price": None if it.get("price") is None else str(it["price"])})
     return out
+
+
+def degenerate(raw: str) -> bool:
+    """The fp16 failure mode: a response made only of '!' (or nothing)."""
+    return not raw.strip().strip("!")
 
 
 class Cassette:
@@ -100,8 +108,15 @@ class VisionModel:
         from mlx_vlm.prompt_utils import apply_chat_template
         from PIL import Image
 
-        path = Path("/tmp/claims-docai-page.png")
-        Image.open(io.BytesIO(image)).convert("RGB").save(path)
         prompt = apply_chat_template(self.processor, self.config, INSTRUCTIONS, num_images=1)
-        res = generate(self.model, self.processor, prompt, image=[str(path)], max_tokens=500, temperature=0.0, verbose=False)
-        return res.text if hasattr(res, "text") else str(res)
+        path = Path("/tmp/claims-docai-page.png")
+        text = ""
+        for side in SIDES:
+            page = Image.open(io.BytesIO(image)).convert("RGB")
+            page.thumbnail((side, side))
+            page.save(path)
+            res = generate(self.model, self.processor, prompt, image=[str(path)], max_tokens=500, temperature=0.0, verbose=False)
+            text = res.text if hasattr(res, "text") else str(res)
+            if not degenerate(text):
+                break
+        return text

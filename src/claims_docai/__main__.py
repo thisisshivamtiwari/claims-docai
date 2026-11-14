@@ -5,6 +5,7 @@ python -m claims_docai ocr                        # cache Apple Vision OCR for e
 python -m claims_docai record <arm> <split>       # run a model arm, append raw outputs to cassettes/ (macOS, MLX)
 python -m claims_docai eval                       # score every arm from cached OCR + cassettes -> results/
 python -m claims_docai ci                         # replay eval and fail if it no longer matches results/
+python -m claims_docai demo <doc id> ...          # terminal walk-through used for the demo video
 """
 
 from __future__ import annotations
@@ -61,6 +62,10 @@ def main(argv: list[str]) -> int:
         cmd_record(*rest)
     elif cmd == "eval":
         run_all(write=True)
+    elif cmd == "demo":
+        from .demo import main as demo
+
+        demo(rest)
     elif cmd == "ci":
         return 0 if run_all(write=False) else 1
     else:

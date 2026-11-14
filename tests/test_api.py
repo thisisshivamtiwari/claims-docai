@@ -27,7 +27,8 @@ def test_submit_review_and_approve(tmp_path):
 
     client.post(f"/review/{res['id']}", data={"tax": "1,300"}, follow_redirects=False)
     assert "Nothing waiting" in client.get("/review").text
-    assert client.get(f"/claims/{res['id']}").json()["fields"]["tax"]["reviewed"]
+    tax = client.get(f"/claims/{res['id']}").json()["fields"]["tax"]
+    assert tax["reviewed"] and tax["value"] == 1300
     assert (tmp_path / "decisions.jsonl").read_text().count("\n") == 1
 
 

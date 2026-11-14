@@ -81,3 +81,8 @@ def test_threshold_is_lowest_reaching_target():
     decs = [(1.0, True)] * 99 + [(0.8, True), (0.8, False), (0.8, False), (0.5, False)]
     assert pick_threshold(decs, 0.99) == 1.0
     assert pick_threshold([(0.5, False)], 0.99) is None
+
+
+def test_degenerate_vision_output():
+    assert llm.degenerate("!!!!!!!!") and llm.degenerate("  ")
+    assert not llm.degenerate('```json\n{"total": "8,000"}\n```')
