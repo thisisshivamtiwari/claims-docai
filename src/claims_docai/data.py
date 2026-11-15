@@ -16,7 +16,7 @@ HEADER_FIELDS = ("total", "subtotal", "tax")
 
 
 @dataclass
-class Token:
+class Word:
     text: str
     x: float  # left, 0..1 of page width
     y: float  # top, 0..1 of page height
@@ -30,7 +30,7 @@ class Doc:
     id: str
     image: bytes
     truth: dict  # {"total": str|None, "subtotal": ..., "tax": ..., "items": [{"name", "price"}]}
-    gold_tokens: list[Token] = field(default_factory=list)
+    gold_tokens: list[Word] = field(default_factory=list)
 
 
 def _first(v):
@@ -62,7 +62,7 @@ def parse_truth(gt: dict) -> dict:
     }
 
 
-def gold_tokens(gt: dict) -> list[Token]:
+def gold_tokens(gt: dict) -> list[Word]:
     meta = gt["meta"]["image_size"]
     width, height = meta["width"], meta["height"]
     out = []
@@ -71,7 +71,7 @@ def gold_tokens(gt: dict) -> list[Token]:
             q = w["quad"]
             xs, ys = [q["x1"], q["x2"], q["x3"], q["x4"]], [q["y1"], q["y2"], q["y3"], q["y4"]]
             out.append(
-                Token(
+                Word(
                     w["text"],
                     min(xs) / width,
                     min(ys) / height,

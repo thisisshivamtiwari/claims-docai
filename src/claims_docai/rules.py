@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from .data import Token
+from .data import Word
 from .normalize import AMOUNT
 from .ocr import rows
 
@@ -19,7 +19,7 @@ def _amounts(line: str) -> list[str]:
     return [m.group(0) for m in MONEY.finditer(line)]
 
 
-def extract(toks: list[Token]) -> dict:
+def extract(toks: list[Word]) -> dict:
     lines = ["  ".join(t.text for t in r) for r in rows(toks)]
     out: dict = {"total": None, "subtotal": None, "tax": None, "items": []}
     first_summary = len(lines)

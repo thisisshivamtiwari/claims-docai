@@ -1,0 +1,4 @@
+# Exact strings the secrets/PII scan may allow. Synthetic only.
+# Qwen2.5-1.5B answered "000000000000" for the amounts on receipt validation-098 (cassettes/text-vision-validation.jsonl).
+# It is a garbled model output, not a phone number.
+000000000000

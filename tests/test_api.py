@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from claims_docai.api import create_app
-from claims_docai.data import Token
+from claims_docai.data import Word
 
 SETTINGS = {
     "priority": {f: ["vlm", "text-vision", "rules-vision"] for f in ("total", "subtotal", "tax", "items")},
@@ -12,7 +12,7 @@ SETTINGS = {
 def stub(image: bytes):
     good = {"total": "14,300", "subtotal": "13,000", "tax": "1,300", "items": []}
     preds = {"rules-vision": good, "text-vision": {**good, "tax": "130"}, "vlm": good}
-    return preds, [Token(t, 0, 0, 0.1, 0.02) for t in ("13,000", "1,300", "14,300")]
+    return preds, [Word(t, 0, 0, 0.1, 0.02) for t in ("13,000", "1,300", "14,300")]
 
 
 def test_submit_review_and_approve(tmp_path):

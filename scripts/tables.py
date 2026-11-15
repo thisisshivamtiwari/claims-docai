@@ -31,20 +31,20 @@ def render(res: dict) -> str:
             f"| {label} | {pct(t['total']['accuracy'])} | {pct(t['subtotal']['accuracy'])} | {pct(t['tax']['accuracy'])} | "
             f"{pct(t['documents_all_header_fields_correct'])} | {pct(t['items']['f1'])} | {'-' if lat is None else lat} |"
         )
-    p = res.get("pipeline")
-    if p:
-        target = pct(p["target_precision"])
-        out += ["", f"**Review queue** (threshold chosen on validation for {target} precision, then applied once to test)", ""]
-        out += ["| Split | Threshold | Field decisions | Auto-approved | Auto-approved precision | To a handler | Fully auto |"]
+    ops = res.get("operating_points")
+    if ops:
+        out += ["", "**Review queue** (threshold chosen on validation for each precision target, then applied once to test)", ""]
+        out += ["| Target | Split | Threshold | Auto-approved fields | Auto-approved precision | To a handler | Fully auto |"]
         out += ["|---|---|---|---|---|---|---|"]
-        for s in ("validation", "test"):
-            r = p[s]
-            auto = f"{r['auto_approved']} ({pct(r['auto_approved_share'])})"
-            prec = f"{pct(r['auto_approved_precision'])} ({r['auto_approved_correct']}/{r['auto_approved']})"
-            out.append(
-                f"| {s} | {r['threshold']} | {r['field_decisions']} | {auto} | {prec} | {r['sent_to_review']} | "
-                f"{r['documents_fully_auto']}/{r['documents']} |"
-            )
+        for target, by_split in ops.items():
+            for s in ("validation", "test"):
+                r = by_split[s]
+                auto = f"{r['auto_approved']}/{r['field_decisions']} ({pct(r['auto_approved_share'])})"
+                prec = f"{pct(r['auto_approved_precision'])} ({r['auto_approved_correct']}/{r['auto_approved']})"
+                out.append(
+                    f"| {pct(float(target))} | {s} | {r['threshold'] or 'none reached'} | {auto} | {prec} | "
+                    f"{r['sent_to_review']} | {r['documents_fully_auto']}/{r['documents']} |"
+                )
     return "\n".join(out)
 
 

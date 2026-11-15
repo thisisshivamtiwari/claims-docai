@@ -8,8 +8,9 @@ Pipeline (inputs a claims team really has: the image and Apple Vision OCR):
 - ties go to the arm with the best validation accuracy for that field;
 - confidence = 0.5 x share of arms agreeing + 0.25 if the amount is printed in the OCR + 0.25 if the receipt's
   arithmetic holds (subtotal + tax = total, items add up, or tax ~ 10% of subtotal);
-- the auto-approve threshold is the lowest one that reaches 99% precision on the validation split; test is scored
-  once with that threshold. Everything below it goes to a handler.
+- the auto-approve threshold is the lowest one that reaches the target precision on the validation split; test is
+  scored once with that threshold. Everything below it goes to a handler. The service runs at 98%: on 300 validation
+  decisions no threshold reached 99% (the top bucket was 49/50). Every target in OPERATING_POINTS is reported.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ import json
 from collections import Counter
 
 from . import llm, rules
-from .data import HEADER_FIELDS, ROOT, Token, truths
+from .data import HEADER_FIELDS, ROOT, Word, truths
 from .normalize import amount, name
 from .ocr import CACHE, cached_tokens
 
@@ -32,12 +33,13 @@ ARMS = {
     "vlm": "Qwen2.5-VL-3B on the image",
 }
 PIPELINE_ARMS = ("rules-vision", "text-vision", "vlm")
-TARGET_PRECISION = 0.99
+TARGET_PRECISION = 0.98
+OPERATING_POINTS = (0.95, 0.98, 0.99)
 
 
-def gold_tokens(split: str) -> dict[str, list[Token]]:
+def gold_tokens(split: str) -> dict[str, list[Word]]:
     raw = json.loads((CACHE / "gold" / f"{split}.json").read_text())
-    return {k: [Token(**t) for t in v] for k, v in raw.items()}
+    return {k: [Word(**t) for t in v] for k, v in raw.items()}
 
 
 def predictions(split: str) -> dict[str, dict[str, dict]]:
@@ -127,7 +129,7 @@ def arithmetic_ok(f: str, vals: dict, items: list[dict]) -> bool:
     )
 
 
-def printed_amounts(toks: list[Token]) -> set[int]:
+def printed_amounts(toks: list[Word]) -> set[int]:
     """Every amount the OCR saw, whole tokens and money-shaped substrings."""
     found = {amount(t.text) for t in toks} | {amount(m) for t in toks for m in rules.MONEY.findall(t.text)}
     return found - {None}
@@ -221,6 +223,10 @@ def run_all(write: bool = True) -> bool:
             "target_precision": TARGET_PRECISION,
             **{s: review_stats(routed[s], tru[s], th) for s in SPLITS},
         }
+        results["operating_points"] = {}
+        for target in OPERATING_POINTS:
+            t = pick_threshold(decisions(routed["validation"], tru["validation"]), target)
+            results["operating_points"][str(target)] = {s: review_stats(routed[s], tru[s], t) for s in SPLITS}
         for s in SPLITS:
             chosen = {
                 i: {**{f: r["fields"][f]["value"] for f in HEADER_FIELDS}, "items": r["items"]} for i, r in routed[s].items()

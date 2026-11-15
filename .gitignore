@@ -5,3 +5,4 @@ data/raw/
 data/review/
 .pytest_cache/
 .ruff_cache/
+.DS_Store

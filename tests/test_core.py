@@ -1,12 +1,12 @@
 from claims_docai import llm, rules
-from claims_docai.data import Token, parse_truth
+from claims_docai.data import Word, parse_truth
 from claims_docai.evaluate import arithmetic_ok, item_scores, pick_threshold, route
 from claims_docai.normalize import amount
 from claims_docai.ocr import rows, text
 
 
 def tok(t, x, y):
-    return Token(t, x, y, 0.1, 0.02)
+    return Word(t, x, y, 0.1, 0.02)
 
 
 def test_amount_formats():
